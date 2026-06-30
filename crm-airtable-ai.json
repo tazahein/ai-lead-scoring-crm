@@ -1,0 +1,581 @@
+{
+  "name": "crm-airtable-upsert",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "CRM",
+          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID"
+        },
+        "table": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Contacts",
+          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID/REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $json.output.name }}",
+            "Phone": "={{ $json.output.phone }}",
+            "Company": "={{ $json.output.company }}",
+            "Lead Score": "={{ $json.output.leadScore }}",
+            "Notes": "={{ $json.output.notes }}",
+            "Stage": "New",
+            "Source": "Email",
+            "Email": "={{ $('Gmail Trigger').item.json.from.value[0].address }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "New",
+                  "value": "New"
+                },
+                {
+                  "name": "Contacted",
+                  "value": "Contacted"
+                },
+                {
+                  "name": "Qualified",
+                  "value": "Qualified"
+                },
+                {
+                  "name": "Proposal",
+                  "value": "Proposal"
+                },
+                {
+                  "name": "Won",
+                  "value": "Won"
+                },
+                {
+                  "name": "Lost",
+                  "value": "Lost"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Hot",
+                  "value": "Hot"
+                },
+                {
+                  "name": "Warm",
+                  "value": "Warm"
+                },
+                {
+                  "name": "Cold",
+                  "value": "Cold"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Last Contacted",
+              "displayName": "Last Contacted",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        496,
+        -400
+      ],
+      "id": "52eb09f3-38b0-4f6a-bbb1-a5d292dbc0b7",
+      "name": "Create or update a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "maxResults": 1,
+        "filters": {
+          "labelIds": [
+            "REPLACE_WITH_YOUR_GMAIL_LABEL_ID"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -32,
+        -368
+      ],
+      "id": "bea87011-d41e-4885-b6f4-81bb47fef32d",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Subject: {{ $json.subject }}\n\nBody:\n{{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a CRM lead-processing assistant. You receive the raw text of an inbound sales lead email. Extract structured contact information and assign a lead score.\n\nExtract these fields:\n- name: the sender's full name. If not stated, return \"\".\n- company: the company or organization name. If not stated, return \"\".\n- phone: any phone number in the message, digits exactly as written. If none, return \"\".\n- leadScore: classify buying intent as EXACTLY one of \"Hot\", \"Warm\", or \"Cold\".\n- notes: a one-sentence summary of what the lead wants.\n\nScoring guide:\n- Hot: explicit urgency, ready to buy, asks for pricing or an immediate call, mentions budget or a timeline.\n- Warm: clearly interested and exploring a solution, requests a conversation, but no urgency or budget stated.\n- Cold: vague, just gathering information, no clear need or intent.\n\nRules:\n- Do NOT invent values. Use \"\" for anything not present in the email.\n- Do NOT output an email address.\n- leadScore must be exactly Hot, Warm, or Cold (capitalized)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        -336
+      ],
+      "id": "6d425075-500b-4c8b-865d-07605a17a6c4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        96,
+        -112
+      ],
+      "id": "a5f2ede1-fa02-4c7b-992c-7ef57d579b33",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": { \"type\": \"string\" },\n    \"company\": { \"type\": \"string\" },\n    \"phone\": { \"type\": \"string\" },\n    \"leadScore\": { \"type\": \"string\", \"enum\": [\"Hot\", \"Warm\", \"Cold\"] },\n    \"notes\": { \"type\": \"string\" }\n  },\n  \"required\": [\"name\", \"company\", \"phone\", \"leadScore\", \"notes\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        352,
+        -112
+      ],
+      "id": "0f42f9dc-adcd-4e6c-931e-cd00eb68c6a5",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "CRM",
+          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID"
+        },
+        "table": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Interactions",
+          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID/REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Summary": "={{ $json.output.notes }}",
+            "Contact Email": "={{ $('Gmail Trigger').item.json.from.value[0].address }}",
+            "Channel": "Email",
+            "Lead Score": "={{ $json.output.leadScore }}",
+            "Received At": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Contact Email",
+              "displayName": "Contact Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Email",
+                  "value": "Email"
+                },
+                {
+                  "name": "Form",
+                  "value": "Form"
+                },
+                {
+                  "name": "Phone",
+                  "value": "Phone"
+                },
+                {
+                  "name": "Manual",
+                  "value": "Manual"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Hot",
+                  "value": "Hot"
+                },
+                {
+                  "name": "Warm",
+                  "value": "Warm"
+                },
+                {
+                  "name": "Cold",
+                  "value": "Cold"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Received At",
+              "displayName": "Received At",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        -544
+      ],
+      "id": "845dc0ef-0efc-489b-b058-1751ec766629",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_SLACK_CHANNEL_ID",
+          "mode": "list",
+          "cachedResultName": "leads"
+        },
+        "text": "=🔥 HOT LEAD: {{ $('AI Agent').item.json.output.name }} from {{ $('AI Agent').item.json.output.company }}\n\n📧 {{ $('Gmail Trigger').item.json.from.value[0].address }}\n📞 {{ $('AI Agent').item.json.output.phone }}\n\n📝 {{ $('AI Agent').item.json.output.notes }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        736,
+        -208
+      ],
+      "id": "ff25c8e9-b170-4ace-b015-6b75f8d6d8d3",
+      "name": "Send a message",
+      "webhookId": "REPLACE_WITH_YOUR_WEBHOOK_ID",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "19d0e242-3014-48e4-a203-f53d46bbdba6",
+              "leftValue": "={{ $('AI Agent').item.json.output.leadScore }}",
+              "rightValue": "Hot",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        -192
+      ],
+      "id": "34bfd95e-7d82-43e4-92c5-eed61fab1efb",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create or update a record",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": []
+}
