@@ -1,81 +1,58 @@
-# telegram-ai-appointment-booking
+# n8n-crm-airtable-ai
 
-An AI-powered Telegram bot that books appointments from a plain-language chat message. Built in n8n. You message the bot something like *"Book a 30 min call next Tuesday 2pm"*, and it extracts the intent, checks your Google Calendar for a conflict, books the slot if it's free, and replies in chat — all automatically.
+AI-powered CRM intake built in [n8n](https://n8n.io). Inbound sales leads arrive by email, get parsed and scored by Claude, and are written to an Airtable CRM — with an append-only interaction history and a Slack alert for hot leads.
 
-This is the **Telegram sibling** of [gmail-ai-appointment-booking](https://github.com/tazahein/gmail-ai-appointment-booking). Same calendar "brain," different front door: the entire AI + calendar core was reused, and only the trigger and reply nodes were swapped from Gmail to Telegram.
+This is Project 8 of my Phase 4 (n8n Mastery) bootcamp work.
 
 ## What it does
 
-1. A user sends the bot a free-text booking request on Telegram.
-2. An **AI Agent** (Claude Sonnet 4.6) reads the message and extracts structured details: start datetime, duration, and purpose.
-3. The workflow checks **Google Calendar** to see whether that slot is free.
-4. If free → it **creates the calendar event** and replies with a confirmation.
-5. If busy → it replies asking for a different time. No event is created.
+When an email lands on a label-gated address (`you+crm@gmail.com`), the workflow:
 
-## Architecture
+1. **Catches it** with a Gmail Trigger filtered to a single label, so only tagged leads enter the pipeline.
+2. **Parses and scores it** with an AI Agent (Claude Sonnet 4.6) that reads the raw email body and extracts `name`, `company`, `phone`, a `leadScore` of Hot / Warm / Cold, and a one-line `notes` summary. A Structured Output Parser with a strict JSON Schema (including an `enum` on `leadScore`) guarantees the output matches the Airtable fields exactly.
+3. **Upserts the contact** into an Airtable **Contacts** table, matching on **Email** so a returning lead updates their existing record instead of creating a duplicate.
+4. **Logs the interaction** as a new row in an append-only **Interactions** table — a full timestamped history of every touchpoint.
+5. **Alerts on hot leads** — an IF node checks `leadScore == "Hot"`, and only then posts a formatted message to a Slack channel.
+
+## Flow
 
 ```
-Telegram Trigger (On message)
-        │
-        ▼
-   AI Agent  ──◄ Anthropic Chat Model (Claude Sonnet 4.6)
-        │     ──◄ Structured Output Parser  →  { startDateTime, durationMinutes, purpose }
-        ▼
-Get availability in a calendar  (Google Calendar – FreeBusy → { available: true/false })
-        │
-        ▼
-       If  ({{ $json.available }} is true?)
-        │
-   true ├────────────► Create an event ───► Send a text message  (✅ confirmation)
-        │
-  false └────────────► Send a text message1 (😕 slot taken)
+Gmail Trigger ──► AI Agent (Claude) ──┬──► Airtable: Contacts (upsert on Email)
+                  + Structured Parser ├──► Airtable: Interactions (append)
+                                      └──► IF (leadScore == Hot) ──true──► Slack: Send message
 ```
 
-| Node | Role |
-|------|------|
-| **Telegram Trigger** | Fires on every incoming message. Message text at `message.text`, sender chat ID at `message.chat.id`. |
-| **AI Agent + Structured Output Parser** | Resolves relative dates ("next Tuesday") against today and returns clean JSON with a `+07:00` offset. |
-| **Get availability in a calendar** | FreeBusy check over the requested window; returns `{ available: true/false }`. |
-| **If** | Boolean branch on `available`. |
-| **Create an event** | Books the slot; end time computed as `startDateTime + durationMinutes`. |
-| **Send a text message / …1** | Telegram replies for the confirmed and conflict paths. |
+## Design notes
 
-## Key concepts demonstrated
-
-- **Reusable workflow design** — the AI Agent, output parser, availability check, IF logic, and event creation were lifted wholesale from the Gmail version. Only the channel-specific endpoints changed.
-- **Telegram Trigger setup** — listening on `On message`, and reading the trigger output paths (`message.text`, `message.chat.id`, `message.from.username`).
-- **Telegram Send Message replies** — dynamic `chatId` so the bot always answers whoever messaged it.
-- **Relative-date resolution** — today's date is injected into the prompt via `{{ $now.toFormat('yyyy-MM-dd') }}` so the model can resolve phrases like "next Tuesday" correctly.
-- **Timezone-correct datetimes** — the model outputs full ISO 8601 with the `+07:00` (Asia/Bangkok) offset; the end time is derived in n8n with `DateTime.fromISO(...).plus({ minutes: ... }).toISO()`.
+- **Email is the upsert match key.** The AI never outputs an email address (it could hallucinate one); the real sender address is pulled from the Gmail message metadata (`from.value[0].address`) and used as the match key. The most recent email's details win on update — standard CRM dedupe behaviour.
+- **Two tables, two behaviours.** Contacts is one living record per person (upsert). Interactions is append-only (create) — so the history grows while the contact record stays current.
+- **Stage is fixed to `New` on intake.** Pipeline progression (New → Contacted → Qualified …) is a human decision, not something the AI overwrites.
+- **The enum guardrail.** The output parser constrains `leadScore` to exactly `Hot`, `Warm`, or `Cold`, so the AI can't write a stray value into the Airtable single-select field.
 
 ## Setup
 
-You'll need an n8n instance (this was built on n8n Cloud) and three credentials:
+This export contains **credential references only** — no secrets. To run it yourself:
 
-1. **Telegram** — a bot token from [@BotFather](https://t.me/BotFather), stored as a Telegram credential.
-2. **Anthropic** — an API key for the Claude model.
-3. **Google Calendar** — OAuth2 (on n8n Cloud this is one-click managed OAuth; no Google Cloud Console needed).
+1. **Import** `crm-airtable-ai.json` into your n8n instance.
+2. **Create the credentials** (each node references one by name; reconnect them to your own):
+   - Airtable Personal Access Token (scopes: `data.records:read`, `data.records:write`, `schema.bases:read`, with access to your base)
+   - Gmail OAuth2
+   - Anthropic API
+   - Slack OAuth2
+3. **Swap in your own IDs** wherever you see a `REPLACE_WITH_YOUR_...` placeholder:
+   - Airtable base ID and the two table IDs (Contacts, Interactions)
+   - Gmail label ID for your lead label
+   - Slack channel ID for your alerts channel
+4. **Build the Airtable base** with two tables:
+   - **Contacts:** Name, Email, Phone, Company, Stage (single select: New/Contacted/Qualified/Proposal/Won/Lost), Lead Score (single select: Hot/Warm/Cold), Source, Last Contacted (date), Notes
+   - **Interactions:** Summary, Contact Email, Channel (single select: Email/Form/Phone/Manual), Lead Score (single select: Hot/Warm/Cold), Received At (date + time)
+5. **Set up the Gmail label** + a filter that applies it to mail sent to your `+crm` plus-address.
+6. **Invite the Slack app** to your alerts channel if the message node returns `not_in_channel`.
 
-Then:
+## Stack
 
-1. Import `Appointment Booking — Telegram.json` into n8n.
-2. Open each credential-bearing node and select your own credentials (the file ships with references only — **no secrets are included**).
-3. In both Google Calendar nodes, pick your target calendar.
-4. Activate the workflow (or run it in test mode), then message your bot.
+n8n · Airtable · Gmail · Anthropic Claude Sonnet 4.6 · Slack
 
-> **Note on the calendar email:** the JSON references a specific calendar address as the selected calendar. Replace it with your own when importing.
+## Notes
 
-## Design notes & gotchas
-
-- **Single-user by design.** This bot is intended for one operator (me). For a multi-user / client-facing version, add **Restrict to Chat IDs** on the Telegram Trigger to whitelist allowed chats, or remove the restriction entirely to let anyone book.
-- **One trigger per bot.** Telegram allows only one active trigger workflow per bot token at a time. If you reuse a bot that other workflows already *send* through, that's fine — but don't run two *trigger* workflows on the same bot.
-- **Timezone inheritance.** Because this workflow was duplicated from the Gmail version, it inherited its calendar/timezone configuration. The original had a bug where an event booked 30 minutes early because the calendar's timezone was set to Yangon (UTC+06:30) instead of Bangkok (UTC+07:00). For maximum portability, pin the **Timezone** field on the Google Calendar nodes rather than relying on the account default. Always verify a test booking lands at the exact requested time.
-- **Credentials are never committed.** n8n exports store credentials as references (`id` + `name`), not as secret values. Keep it that way — never paste a raw token into a node field or commit a `.env`.
-
-## Tech
-
-n8n · Claude Sonnet 4.6 (Anthropic) · Telegram Bot API · Google Calendar API
-
----
-
-*Part of the Zero to AI Automation Agency Bootcamp — Phase 4 (n8n Mastery). Project 7b.*
+`Last Contacted` on the Contacts table is currently left unset by the workflow; `Received At` on Interactions is stamped with `$now.toISO()` at processing time. Stage auto-progression and linked-record relationships between the two tables are possible future enhancements.
