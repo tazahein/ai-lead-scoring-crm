@@ -1,58 +1,65 @@
-# n8n-crm-airtable-ai
+# AI Lead Scoring & CRM Automation (n8n + Claude)
 
-AI-powered CRM intake built in [n8n](https://n8n.io). Inbound sales leads arrive by email, get parsed and scored by Claude, and are written to an Airtable CRM — with an append-only interaction history and a Slack alert for hot leads.
+Automatically reads every incoming sales lead email, scores it with AI (**Hot / Warm / Cold**), logs the contact and interaction to Airtable — and instantly alerts the team on **Slack and Telegram** when a hot lead arrives.
 
-This is Project 8 of my Phase 4 (n8n Mastery) bootcamp work.
+Built with [n8n](https://n8n.io) and Claude (Anthropic).
 
-## What it does
+<!-- TODO: add workflow screenshot -->
+![Workflow canvas](docs/workflow-screenshot.png)
 
-When an email lands on a label-gated address (`you+crm@gmail.com`), the workflow:
+## The problem this solves
 
-1. **Catches it** with a Gmail Trigger filtered to a single label, so only tagged leads enter the pipeline.
-2. **Parses and scores it** with an AI Agent (Claude Sonnet 4.6) that reads the raw email body and extracts `name`, `company`, `phone`, a `leadScore` of Hot / Warm / Cold, and a one-line `notes` summary. A Structured Output Parser with a strict JSON Schema (including an `enum` on `leadScore`) guarantees the output matches the Airtable fields exactly.
-3. **Upserts the contact** into an Airtable **Contacts** table, matching on **Email** so a returning lead updates their existing record instead of creating a duplicate.
-4. **Logs the interaction** as a new row in an append-only **Interactions** table — a full timestamped history of every touchpoint.
-5. **Alerts on hot leads** — an IF node checks `leadScore == "Hot"`, and only then posts a formatted message to a Slack channel.
+Sales enquiries land in a shared inbox. Someone has to read each one, copy the details into the CRM, judge how serious the lead is, and tell the team. Leads go cold while that happens. This workflow does all of it in seconds, 24/7.
 
-## Flow
+## How it works
 
 ```
-Gmail Trigger ──► AI Agent (Claude) ──┬──► Airtable: Contacts (upsert on Email)
-                  + Structured Parser ├──► Airtable: Interactions (append)
-                                      └──► IF (leadScore == Hot) ──true──► Slack: Send message
+Gmail Trigger (new email)
+        │
+        ▼
+   AI Agent ──── Anthropic Chat Model (Claude)
+        │   └─── Structured Output Parser (enum-locked schema)
+        │
+        ├──▶ Airtable · Contacts — upsert (matched on Email, no duplicates)
+        ├──▶ Airtable · Interactions — append full interaction record
+        └──▶ IF leadScore == "Hot"
+                  ├──▶ Slack alert (#leads channel)
+                  └──▶ Telegram alert
 ```
 
-## Design notes
+1. **Gmail Trigger** fires on every new inbound email.
+2. The **AI Agent** (Claude) extracts `name`, `company`, `phone`, writes a one-sentence summary, and assigns a `leadScore`.
+3. A **Structured Output Parser** enforces a strict JSON schema — `leadScore` is enum-locked to exactly `Hot | Warm | Cold`, so downstream logic can never receive an unexpected value.
+4. Three parallel branches run:
+   - **Contacts upsert** in Airtable, matched on the email address — existing contacts are updated, new ones created, never duplicated.
+   - **Interactions append** — every email becomes a logged interaction for full history.
+   - **Hot-lead check** — an IF node routes hot leads to **both Slack and Telegram** for multi-channel fan-out.
 
-- **Email is the upsert match key.** The AI never outputs an email address (it could hallucinate one); the real sender address is pulled from the Gmail message metadata (`from.value[0].address`) and used as the match key. The most recent email's details win on update — standard CRM dedupe behaviour.
-- **Two tables, two behaviours.** Contacts is one living record per person (upsert). Interactions is append-only (create) — so the history grows while the contact record stays current.
-- **Stage is fixed to `New` on intake.** Pipeline progression (New → Contacted → Qualified …) is a human decision, not something the AI overwrites.
-- **The enum guardrail.** The output parser constrains `leadScore` to exactly `Hot`, `Warm`, or `Cold`, so the AI can't write a stray value into the Airtable single-select field.
+## Design decisions
+
+- **Email as the upsert key, taken from Gmail metadata** (`$('Gmail Trigger').item.json.from.value[0].address`) — never from the AI output. The sender address is ground truth; the AI only extracts what it reads in the message body. This keeps deduplication reliable even if the AI misreads something.
+- **Enum-locked lead scoring.** The output parser schema restricts `leadScore` to three exact values. Free-text scores ("pretty hot", "HOT!!") would silently break the IF routing and the Airtable single-select field.
+- **Credentials as n8n references only.** This export contains zero tokens or keys — all six credentialed nodes reference credentials stored inside n8n. Safe to publish, safe to import.
+- **Parallel branches instead of a chain**, so a failure in one destination (e.g. Slack) doesn't block CRM logging.
 
 ## Setup
 
-This export contains **credential references only** — no secrets. To run it yourself:
+**You'll need:** an n8n instance (Cloud or self-hosted), a Gmail account (OAuth2), an Anthropic API key, an Airtable base, and optionally Slack + Telegram.
 
-1. **Import** `crm-airtable-ai.json` into your n8n instance.
-2. **Create the credentials** (each node references one by name; reconnect them to your own):
-   - Airtable Personal Access Token (scopes: `data.records:read`, `data.records:write`, `schema.bases:read`, with access to your base)
-   - Gmail OAuth2
-   - Anthropic API
-   - Slack OAuth2
-3. **Swap in your own IDs** wherever you see a `REPLACE_WITH_YOUR_...` placeholder:
-   - Airtable base ID and the two table IDs (Contacts, Interactions)
-   - Gmail label ID for your lead label
-   - Slack channel ID for your alerts channel
-4. **Build the Airtable base** with two tables:
-   - **Contacts:** Name, Email, Phone, Company, Stage (single select: New/Contacted/Qualified/Proposal/Won/Lost), Lead Score (single select: Hot/Warm/Cold), Source, Last Contacted (date), Notes
-   - **Interactions:** Summary, Contact Email, Channel (single select: Email/Form/Phone/Manual), Lead Score (single select: Hot/Warm/Cold), Received At (date + time)
-5. **Set up the Gmail label** + a filter that applies it to mail sent to your `+crm` plus-address.
-6. **Invite the Slack app** to your alerts channel if the message node returns `not_in_channel`.
+1. Import `crm-airtable-upsert.json` into n8n (Workflow → Import from File).
+2. Create/attach your own credentials on each node: Gmail OAuth2, Anthropic, Airtable Personal Access Token, Slack OAuth2, Telegram Bot API.
+3. Create an Airtable base with two tables:
+   - **Contacts:** `Name`, `Email` (unique), `Phone`, `Company`, `Lead Score` (single select: Hot/Warm/Cold), `Notes`, `Stage`, `Source`
+   - **Interactions:** linked `Contact`, channel/summary fields as desired
+4. Replace the placeholders: `YOUR_AIRTABLE_BASE_ID`, `YOUR_AIRTABLE_TABLE_ID`, `YOUR_SLACK_CHANNEL_ID`, `YOUR_TELEGRAM_CHAT_ID` (get yours by messaging your bot, then calling the `getUpdates` endpoint).
+5. Activate the workflow and send yourself a test lead email.
 
-## Stack
+## Example hot-lead alert
 
-n8n · Airtable · Gmail · Anthropic Claude Sonnet 4.6 · Slack
+> 🔥 HOT LEAD: Somchai P. from Rayong Dental Group
+> 📧 somchai@example.com · 📞 08x-xxx-xxxx
+> 📝 Wants pricing for a 12-chair clinic booking system, decision this month.
 
-## Notes
+---
 
-`Last Contacted` on the Contacts table is currently left unset by the workflow; `Received At` on Interactions is stamped with `$now.toISO()` at processing time. Stage auto-progression and linked-record relationships between the two tables are possible future enhancements.
+*Part of a series of production-style AI automation projects — more at [github.com/tazahein](https://github.com/tazahein).*

@@ -6,17 +6,15 @@
         "operation": "upsert",
         "base": {
           "__rl": true,
-          "value": "REPLACE_WITH_YOUR_AIRTABLE_BASE_ID",
+          "value": "YOUR_AIRTABLE_BASE_ID",
           "mode": "list",
-          "cachedResultName": "CRM",
-          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID"
+          "cachedResultName": "CRM"
         },
         "table": {
           "__rl": true,
-          "value": "REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID",
+          "value": "YOUR_AIRTABLE_TABLE_ID",
           "mode": "list",
-          "cachedResultName": "Contacts",
-          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID/REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID"
+          "cachedResultName": "Contacts"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -199,7 +197,7 @@
       "name": "Create or update a record",
       "credentials": {
         "airtableTokenApi": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "id": "Oz6IHZ6HV3V92nY2",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -217,7 +215,7 @@
         "maxResults": 1,
         "filters": {
           "labelIds": [
-            "REPLACE_WITH_YOUR_GMAIL_LABEL_ID"
+            "Label_6944583519562127650"
           ]
         },
         "options": {}
@@ -232,7 +230,7 @@
       "name": "Gmail Trigger",
       "credentials": {
         "gmailOAuth2": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "id": "ZBXJly5Sj9OFfPWA",
           "name": "Gmail account 2"
         }
       }
@@ -275,7 +273,7 @@
       "name": "Anthropic Chat Model",
       "credentials": {
         "anthropicApi": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "id": "lFXNGT0iE6096gj6",
           "name": "Anthropic account"
         }
       }
@@ -299,17 +297,15 @@
         "operation": "create",
         "base": {
           "__rl": true,
-          "value": "REPLACE_WITH_YOUR_AIRTABLE_BASE_ID",
+          "value": "YOUR_AIRTABLE_BASE_ID",
           "mode": "list",
-          "cachedResultName": "CRM",
-          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID"
+          "cachedResultName": "CRM"
         },
         "table": {
           "__rl": true,
-          "value": "REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID",
+          "value": "YOUR_AIRTABLE_TABLE_ID",
           "mode": "list",
-          "cachedResultName": "Interactions",
-          "cachedResultUrl": "https://airtable.com/REPLACE_WITH_YOUR_AIRTABLE_BASE_ID/REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID"
+          "cachedResultName": "Interactions"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -425,7 +421,7 @@
       "name": "Create a record",
       "credentials": {
         "airtableTokenApi": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "id": "Oz6IHZ6HV3V92nY2",
           "name": "Airtable Personal Access Token account"
         }
       }
@@ -436,7 +432,7 @@
         "select": "channel",
         "channelId": {
           "__rl": true,
-          "value": "REPLACE_WITH_YOUR_SLACK_CHANNEL_ID",
+          "value": "YOUR_SLACK_CHANNEL_ID",
           "mode": "list",
           "cachedResultName": "leads"
         },
@@ -446,15 +442,15 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.5,
       "position": [
-        736,
-        -208
+        800,
+        -176
       ],
       "id": "ff25c8e9-b170-4ace-b015-6b75f8d6d8d3",
       "name": "Send a message",
-      "webhookId": "REPLACE_WITH_YOUR_WEBHOOK_ID",
+      "webhookId": "d54c0d6b-f39a-4732-a892-a67a45a8d9cf",
       "credentials": {
         "slackOAuth2Api": {
-          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "id": "E4ocHrYdqeA6P9QD",
           "name": "Slack account"
         }
       }
@@ -492,6 +488,28 @@
       ],
       "id": "34bfd95e-7d82-43e4-92c5-eed61fab1efb",
       "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🔥 HOT LEAD: {{ $('AI Agent').item.json.output.name }} from {{ $('AI Agent').item.json.output.company }}  📧 {{ $('Gmail Trigger').item.json.from.value[0].address }} 📞 {{ $('AI Agent').item.json.output.phone }}  📝 {{ $('AI Agent').item.json.output.notes }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        800,
+        -352
+      ],
+      "id": "4adeb0bd-af9d-4de3-a3f8-1d142245b100",
+      "name": "Send a text message",
+      "webhookId": "705713a6-1670-4de1-9df6-a8c273bfad66",
+      "credentials": {
+        "telegramApi": {
+          "id": "qaw6NCYHiU0H2MEE",
+          "name": "Telegram account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -560,6 +578,11 @@
         [
           {
             "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a text message",
             "type": "main",
             "index": 0
           }

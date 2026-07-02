@@ -1,37 +1,30 @@
-# --- Secrets & credentials (never commit) ---
+# --- Secrets & credentials (safety net — never commit these) ---
 .env
 .env.*
-*.env
-credentials.json
-*credentials*.json
-*secret*
-*secrets*
-*.key
 *.pem
+*.key
+*credentials*
+*secrets*
 *token*
+!**/README.md
+
+# --- n8n local artifacts ---
 .n8n/
-# n8n exports that may contain raw credential data — only commit the scrubbed file
-*.credentials.json
+*.sqlite
+*.backup.json
 
-# --- OS junk ---
+# --- macOS ---
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+.AppleDouble
+.LSOverride
 
-# --- Editor / IDE ---
+# --- Editors ---
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 
-# --- Logs & temp ---
-*.log
-npm-debug.log*
+# --- Node / misc (if you add helper scripts later) ---
 node_modules/
-tmp/
-temp/
+npm-debug.log*
+__pycache__/
+*.pyc
