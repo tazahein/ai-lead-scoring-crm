@@ -215,7 +215,7 @@
         "maxResults": 1,
         "filters": {
           "labelIds": [
-            "Label_6944583519562127650"
+            "YOUR_GMAIL_LABEL_ID"
           ]
         },
         "options": {}
